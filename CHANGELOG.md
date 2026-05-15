@@ -10,6 +10,8 @@
 
 ### Features
 
+- feat: |Mail API| 为 `raw_mails` 新增通用字段 `original_recipient`，从可信邮件头和转发痕迹中推断原始/转发前收件邮箱，并保持 `/admin/mails` 现有 `address` 查询语义不变
+
 - feat: |Admin 邮件| 在后台邮件列表新增“一键清空全部邮件”操作，并新增 `DELETE /admin/mails` 接口；可通过可选 `address` 参数只清空单个邮箱地址的收件箱
 - feat: |Frontend| 将邮箱地址凭证弹窗升级为“地址凭证与连接方式”，复用普通用户与 admin 创建邮箱结果弹窗；支持通过 `ENABLE_AGENT_EMAIL_INFO` 展示 AI Agent 接入信息，并通过 `SMTP_IMAP_PROXY_CONFIG` 展示 SMTP/IMAP 客户端连接信息
 - docs: |随机子域名| 在前端“启用随机子域名”提示与 `subdomain` / `worker-vars` 文档（中英）中明确说明：要让 `name@<随机>.abc.com` 真正收到邮件，必须在基础域名 DNS 中为 `*` 子域添加通配 MX 记录，Email Routing 子域不继承父域配置（issue #1035）

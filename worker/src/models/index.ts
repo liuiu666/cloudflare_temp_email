@@ -203,6 +203,7 @@ export type RawMailRow = {
     message_id?: string;
     source?: string;
     address?: string;
+    original_recipient?: string;
     raw?: string;
     raw_blob?: unknown;
     metadata?: string;

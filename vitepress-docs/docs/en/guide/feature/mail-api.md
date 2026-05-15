@@ -45,6 +45,8 @@ response = requests.get(url, headers=headers, params=querystring)
 print(response.json())
 ```
 
+Results may include `original_recipient`, an inferred original/pre-forwarding recipient from trusted mail headers or forwarding traces. It is empty when no reliable value can be inferred. `address` still means the mailbox address actually delivered to the Worker.
+
 **Note**: `/admin/mails` follows the same design as `/api/mails`: it returns stored raw MIME data. If you need readable subject/body, parse the raw content on the client side.
 
 **Note**: Keyword filtering has been removed from the backend API. If you need to filter emails by content, please use the frontend filter input in the UI, which filters the currently displayed page.

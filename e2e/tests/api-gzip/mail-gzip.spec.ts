@@ -20,8 +20,8 @@ async function createGzipAddress(ctx: any, name: string) {
 // Helper: seed mail via receiveMail (goes through email() handler → gzip compression)
 async function receiveGzipMail(
   ctx: any, address: string,
-  opts: { subject?: string; html?: string; text?: string; from?: string }
-) {
+  opts: { subject?: string; html?: string; text?: string; from?: string; headers?: string[] }
+): Promise<string> {
   const from = opts.from || `sender@${TEST_DOMAIN}`;
   const subject = opts.subject || 'Test Email';
   const boundary = `----E2E${Date.now()}`;
@@ -31,6 +31,7 @@ async function receiveGzipMail(
 
   const raw = [
     `From: ${from}`,
+    ...(opts.headers || []),
     `To: ${address}`,
     `Subject: ${subject}`,
     `Message-ID: ${messageId}`,
@@ -54,6 +55,7 @@ async function receiveGzipMail(
   if (!res.ok()) throw new Error(`Failed to receive mail: ${res.status()} ${await res.text()}`);
   const body = await res.json();
   if (!body.success) throw new Error(`Mail was rejected: ${body.rejected || 'unknown reason'}`);
+  return messageId;
 }
 
 // Helper: seed mail via seedMail (direct INSERT → plaintext raw, no gzip)
@@ -234,6 +236,31 @@ test.describe('Mail Gzip Storage', () => {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       const mail = await detailRes.json();
+      expect(mail).not.toHaveProperty('raw_blob');
+    } finally {
+      await deleteGzipAddress(request, jwt);
+    }
+  });
+
+  test('gzip-compressed mail stores original_recipient', async ({ request }) => {
+    const { jwt, address } = await createGzipAddress(request, 'gzip-original-recipient');
+    const originalRecipient = 'fester-flaky-bats@duck.com';
+    try {
+      const messageId = await receiveGzipMail(request, address, {
+        subject: 'Gzip Original Recipient',
+        text: 'compressed original recipient content',
+        headers: [`X-Original-To: ${originalRecipient}`],
+      });
+
+      const res = await request.get(
+        `${WORKER_GZIP_URL}/admin/mails?limit=10&offset=0&address=${encodeURIComponent(address)}`,
+      );
+      expect(res.ok()).toBe(true);
+      const { results } = await res.json();
+      const mail = results.find((item: any) => item.message_id === messageId);
+      expect(mail).toBeDefined();
+      expect(mail.original_recipient).toBe(originalRecipient);
+      expect(mail.raw).toContain('Gzip Original Recipient');
       expect(mail).not.toHaveProperty('raw_blob');
     } finally {
       await deleteGzipAddress(request, jwt);

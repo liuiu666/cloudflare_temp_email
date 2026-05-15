@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS raw_mails (
     message_id TEXT,
     source TEXT,
     address TEXT,
+    original_recipient TEXT,
     raw TEXT,
     raw_blob BLOB,
     metadata TEXT,
@@ -19,6 +20,8 @@ CREATE INDEX IF NOT EXISTS idx_raw_mails_address ON raw_mails(address);
 CREATE INDEX IF NOT EXISTS idx_raw_mails_created_at ON raw_mails(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_raw_mails_message_id ON raw_mails(message_id);
+
+CREATE INDEX IF NOT EXISTS idx_raw_mails_original_recipient ON raw_mails(original_recipient);
 
 CREATE TABLE IF NOT EXISTS address (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,6 +199,21 @@ export default {
             if (!hasRawBlob) {
                 await c.env.DB.exec(`ALTER TABLE raw_mails ADD COLUMN raw_blob BLOB;`);
             }
+        }
+        if (version && version <= "v0.0.7") {
+            // migration to v0.0.8: add original_recipient inferred recipient field
+            const tableInfo = await c.env.DB.prepare(
+                `PRAGMA table_info(raw_mails)`
+            ).all();
+            const hasOriginalRecipient = tableInfo.results?.some(
+                (col: any) => col.name === 'original_recipient'
+            );
+            if (!hasOriginalRecipient) {
+                await c.env.DB.exec(`ALTER TABLE raw_mails ADD COLUMN original_recipient TEXT;`);
+            }
+            await c.env.DB.exec(
+                `CREATE INDEX IF NOT EXISTS idx_raw_mails_original_recipient ON raw_mails(original_recipient);`
+            );
         }
         if (version != CONSTANTS.DB_VERSION) {
             // remove all \r and \n characters from the query string

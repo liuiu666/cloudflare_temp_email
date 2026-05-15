@@ -1,5 +1,7 @@
 import { Context } from 'hono'
 import { getBooleanValue } from '../utils'
+import { extractOriginalRecipient } from '../email/original_recipient'
+import { insertRawMail } from '../email/raw_mail_storage'
 
 // Direct DB insert — bypasses the email() handler.
 const seedMail = async (c: Context<HonoCustomType>) => {
@@ -17,10 +19,20 @@ const seedMail = async (c: Context<HonoCustomType>) => {
         return c.text("message_id too long", 400);
     }
     const msgId = message_id || `<e2e-${Date.now()}@test>`;
-    const { success } = await c.env.DB.prepare(
-        `INSERT INTO raw_mails (message_id, source, address, raw, created_at)`
-        + ` VALUES (?, ?, ?, ?, datetime('now'))`
-    ).bind(msgId, source || address, address, raw).run();
+    const originalRecipient = extractOriginalRecipient({
+        address,
+        source,
+        rawEmail: raw,
+    }) || null;
+    const success = await insertRawMail({
+        db: c.env.DB,
+        source: source || address,
+        address,
+        raw,
+        messageId: msgId,
+        originalRecipient,
+        useCurrentTimestamp: true,
+    });
     return c.json({ success });
 };
 
