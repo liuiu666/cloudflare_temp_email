@@ -69,7 +69,12 @@ jobs:
 
           if [ -n "$use_mail_wasm_parser" ]; then
             echo "Using mail-parser-wasm-worker"
-            pnpm add mail-parser-wasm-worker
+            
+            # ✅ 修复：检查 pnpm add 的返回值，失败立即退出
+            if ! pnpm add mail-parser-wasm-worker; then
+              echo "❌ Failed to add mail-parser-wasm-worker"
+              exit 1
+            fi
             
             # ✅ 修复 3: patch 失败时立即退出，防止部署错误的版本
             if ! git apply ../.github/config/mail-parser-wasm-worker.patch; then
